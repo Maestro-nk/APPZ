@@ -1,51 +1,59 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
-namespace LR_1_APPZ.Entities
+namespace LR1_APPZ.Entities
 {
+    // [ПЕРВИННИЙ ВУЗОЛ]: Сутність студентської групи та її "Залікова книжка"
     public class StudentGroup
     {
         public string Name { get; private set; }
         public int Course { get; private set; }
         public int StudentsCount { get; private set; }
-        public int CompletedPracticalTasks { get; private set; }
-        public int TotalStudiedHours { get; private set; }
 
-        // Я додав список для збереження предметів, які група вже успішно склала
-        public List<string> CompletedDisciplines { get; private set; }
+        // Тут словники для зберігання прогресу ізольовано для кожної дисципліни
+        public Dictionary<string, int> HoursPerDiscipline { get; private set; } = new Dictionary<string, int>();
+        public Dictionary<string, int> LabsPerDiscipline { get; private set; } = new Dictionary<string, int>();
+        public Dictionary<string, int> MkrPerDiscipline { get; private set; } = new Dictionary<string, int>();
 
-        public StudentGroup(string name, int course, int studentsCount, int initialHours = 0)
+        public List<string> PassedExams { get; private set; } = new List<string>();
+        public List<string> CompletedDisciplines { get; private set; } = new List<string>();
+
+        // Тут конструктор студентської групи
+        public StudentGroup(string name, int course, int studentsCount)
         {
             Name = name;
             Course = course;
             StudentsCount = studentsCount;
-            CompletedPracticalTasks = 0;
-            TotalStudiedHours = initialHours;
-            CompletedDisciplines = new List<string>();
         }
 
-        public void CompletePracticalTask() => CompletedPracticalTasks++;
-        public void AddStudiedHours(int hours) => TotalStudiedHours += hours;
-
-        // Фіксація успішного вивчення дисципліни
-        public void MarkDisciplineAsCompleted(string disciplineName)
-        {
-            if (!CompletedDisciplines.Contains(disciplineName))
-                CompletedDisciplines.Add(disciplineName);
-        }
-
-        // Моя логіка розрахунку підгруп: 1 група = 2 підгрупи по 50%, але не менше 10 осіб у кожній
+        // Тут алгоритм розрахунку підгруп (якщо менше 10 людей - лаби не проводяться)
         public int CalculateLabSubgroups()
         {
-            if (StudentsCount < 10) return 0; // Якщо загалом менше 10, лаби проводити не можна
-
-            int half = StudentsCount / 2; // Ділимо групу навпіл
-            if (half >= 10)
-            {
-                return 2; // Якщо половина це 10 або більше студентів - робимо 2 підгрупи
-            }
-
-            return 1; // Якщо половина менше 10 (наприклад, група 18 осіб) - залишаємо 1 підгрупу
+            if (StudentsCount < 10) return 0;
+            return (StudentsCount / 2) >= 10 ? 2 : 1;
         }
+
+        // Тут методи безпечного нарахування прогресу (Студент відвідав заняття)
+        public void AddHours(string discipline, int hours)
+        {
+            if (!HoursPerDiscipline.ContainsKey(discipline)) HoursPerDiscipline[discipline] = 0;
+            HoursPerDiscipline[discipline] += hours;
+        }
+
+        public void AddLab(string discipline)
+        {
+            if (!LabsPerDiscipline.ContainsKey(discipline)) LabsPerDiscipline[discipline] = 0;
+            LabsPerDiscipline[discipline]++;
+        }
+
+        public void AddMkr(string discipline)
+        {
+            if (!MkrPerDiscipline.ContainsKey(discipline)) MkrPerDiscipline[discipline] = 0;
+            MkrPerDiscipline[discipline]++;
+        }
+
+        // Тут геттери для отримання статистики групи по конкретному предмету
+        public int GetHours(string d) => HoursPerDiscipline.ContainsKey(d) ? HoursPerDiscipline[d] : 0;
+        public int GetLabs(string d) => LabsPerDiscipline.ContainsKey(d) ? LabsPerDiscipline[d] : 0;
+        public int GetMkr(string d) => MkrPerDiscipline.ContainsKey(d) ? MkrPerDiscipline[d] : 0;
     }
 }

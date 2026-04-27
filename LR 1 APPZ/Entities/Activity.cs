@@ -1,50 +1,21 @@
-﻿using System;
-
-namespace LR_1_APPZ.Entities
+﻿namespace LR1_APPZ.Entities
 {
-    // Я додав МКР (Модульну контрольну роботу) до переліку активностей
-    public enum ActivityType { Lecture, Laboratory, Exam, Credit, ModularControl }
+    // [ВТОРИННИЙ ВУЗОЛ]: Категорії активностей для правильного призначення викладачів
+    public enum ActivityCategory { Lecture, Practice, Control }
 
+    // [ВТОРИННИЙ ВУЗОЛ]: Клас активності, який дозволяє легко додавати нові типи занять
     public class Activity
     {
-        public string Title { get; private set; }
-        public ActivityType Type { get; private set; }
-        public Teacher AssignedTeacher { get; private set; }
-        public int Duration { get; private set; }
+        public string Name { get; private set; }
+        public ActivityCategory Category { get; private set; }
+        public int DurationHours { get; private set; }
 
-        public Activity(string title, ActivityType type, int duration)
+        // Тут конструктор активності
+        public Activity(string name, ActivityCategory category, int durationHours)
         {
-            Title = title;
-            Type = type;
-            Duration = duration;
-        }
-
-        public bool AssignTeacher(Teacher teacher, string disciplineName)
-        {
-            if (teacher.AssignDiscipline(disciplineName))
-            {
-                AssignedTeacher = teacher;
-                return true;
-            }
-            return false;
-        }
-
-        // Guard Clause: я перевіряю всі умови до того, як дозволити проведення заняття
-        public bool CanStart(StudentGroup group, Discipline discipline, out string error)
-        {
-            if (AssignedTeacher == null) { error = "Викладача не призначено."; return false; }
-            if (AssignedTeacher.IsBusy) { error = $"Викладач {AssignedTeacher.Name} зараз веде пару в іншої групи!"; return false; }
-            if (Type == ActivityType.Laboratory && group.CalculateLabSubgroups() == 0) { error = "Група занадто мала для лабораторних (менше 10 осіб)."; return false; }
-            if (group.TotalStudiedHours + Duration > discipline.TargetHours) { error = $"Перевищено ліміт годин дисципліни ({discipline.TargetHours} год)."; return false; }
-
-            error = "ОК";
-            return true;
-        }
-
-        public void Conduct(StudentGroup group)
-        {
-            if (Type == ActivityType.Laboratory) group.CompletePracticalTask();
-            group.AddStudiedHours(Duration);
+            Name = name;
+            Category = category;
+            DurationHours = durationHours;
         }
     }
 }

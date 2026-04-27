@@ -1,51 +1,98 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
-namespace LR_1_APPZ.Entities
+namespace LR1_APPZ.Entities
 {
+    // [ВТОРИННИЙ ВУЗОЛ]: Типи фінального контролю
+    public enum FinalControlType { Credit, Exam, ExamAndCoursework }
+
+    // [ПЕРВИННИЙ ВУЗОЛ]: Головний клас Дисципліни (акумулює викладачів, активності та логіку допусків)
     public class Discipline
     {
         public string Name { get; private set; }
         public List<int> AllowedCourses { get; private set; }
-        public int TargetHours { get; private set; }
-        public List<Activity> Activities { get; private set; }
+        public FinalControlType FinalControl { get; private set; }
 
-        // Я використовую цей прапорець, щоб визначити тип фінального контролю (Залік чи Екзамен/МКР)
-        public bool IsCredit { get; private set; }
+        // Тут список об'єктів активностей (Лекції, Лаби тощо)
+        public List<Activity> Activities { get; private set; } = new List<Activity>();
 
-        public Discipline(string name, List<int> allowedCourses, int targetHours, bool isCredit)
+        // Тут жорстко закріплені ролі викладачів (ТЗ)
+        public Teacher MainLecturer { get; private set; }
+        public Teacher Practice1 { get; private set; }
+        public Teacher Practice2 { get; private set; }
+
+        // Тут конструктор дисципліни
+        public Discipline(string name, List<int> allowedCourses, FinalControlType defaultControl)
         {
             Name = name;
             AllowedCourses = allowedCourses;
-            TargetHours = targetHours < 64 ? 64 : targetHours; // Захист мінімальних годин за ТЗ
-            Activities = new List<Activity>();
-            IsCredit = isCredit;
+            FinalControl = defaultControl;
         }
 
         public void AddActivity(Activity activity) => Activities.Add(activity);
+        public void SetFinalControl(FinalControlType controlType) => FinalControl = controlType;
 
-        // Тут я додав перевірку: дисципліну можна вивчати тільки один раз!
-        public bool CanBeStudiedBy(StudentGroup group)
+        // Тут метод закріплення викладачів за предметом
+        public void AssignTeachers(Teacher lecturer, Teacher pr1, Teacher pr2)
         {
-            bool isAllowedCourse = AllowedCourses.Contains(group.Course);
-            bool isAlreadyCompleted = group.CompletedDisciplines.Contains(Name);
-
-            return isAllowedCourse && !isAlreadyCompleted;
+            MainLecturer = lecturer;
+            Practice1 = pr1;
+            Practice2 = pr2;
         }
 
-        // Логіка допуску до МКР/Екзамену та Залік "автоматом"
-        public bool ConductFinalAssessment(StudentGroup group, out string message)
+        public bool CanBeStudiedBy(StudentGroup group)
         {
-            // Якщо це не залік (екзамен або МКР), то потрібні здані роботи
-            if (!IsCredit && group.CompletedPracticalTasks < 1)
+            return AllowedCourses.Contains(group.Course) && !group.CompletedDisciplines.Contains(Name);
+        }
+
+        // Тут алгоритм перевірки допусків до фінального контролю (64 год, 8 ЛР, 2 МКР)
+        public bool TryPassFinal(StudentGroup group, out string message)
+        {
+            int hours = group.GetHours(Name);
+            int mkr = group.GetMkr(Name);
+            int labs = group.GetLabs(Name);
+
+            // Базові перевірки, обов'язкові для всіх (навіть для Заліку)
+            if (hours < 64) { message = $"Недостатньо аудиторних годин ({hours}/64)."; return false; }
+            if (mkr < 2) { message = $"Необхідно скласти 2 МКР. Складено: {mkr}."; return false; }
+
+            // Логіка Заліку
+            if (FinalControl == FinalControlType.Credit)
             {
-                message = "Без зданих лабораторних робіт допуск до МКР/Екзамену заборонено!";
-                return false;
+                message = "Залік успішно отримано! Дисципліну закрито.";
+                group.CompletedDisciplines.Add(Name);
+                return true;
             }
 
-            message = IsCredit ? "Залік виставлено автоматом!" : "МКР/Екзамен успішно складено!";
-            group.MarkDisciplineAsCompleted(Name); // Фіксуємо, що група пройшла предмет
-            return true;
+            // Блокування доступу до Екзамену без лабораторних
+            if (labs < 8) { message = $"Необхідно мінімум 8 ЛР для екзамену. Здано: {labs}."; return false; }
+
+            // Логіка простого Екзамену
+            if (FinalControl == FinalControlType.Exam)
+            {
+                message = "Екзамен успішно складено! Дисципліну закрито.";
+                group.CompletedDisciplines.Add(Name);
+                return true;
+            }
+
+            // Логіка багатоетапного фіналу (Екзамен + Курсова)
+            if (FinalControl == FinalControlType.ExamAndCoursework)
+            {
+                if (!group.PassedExams.Contains(Name))
+                {
+                    message = "Екзамен успішно складено! Тепер необхідно захистити Курсову роботу.";
+                    group.PassedExams.Add(Name);
+                    return true;
+                }
+                else
+                {
+                    message = "Курсову роботу успішно захищено! Дисципліну закрито.";
+                    group.CompletedDisciplines.Add(Name);
+                    return true;
+                }
+            }
+
+            message = "Невідома конфігурація предмета.";
+            return false;
         }
     }
 }

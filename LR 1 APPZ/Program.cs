@@ -1,191 +1,296 @@
 ﻿using System;
 using System.Collections.Generic;
-using LR_1_APPZ.Entities;
+using System.Linq;
+using LR1_APPZ.Entities;
 
-namespace LR_1_APPZ
+namespace LR1_APPZ
 {
+    // [ПЕРВИННИЙ ВУЗОЛ]: Точка входу в програму та управління консольним інтерфейсом
     class Program
     {
+        static List<Teacher> allTeachers = new List<Teacher>();
+        static List<StudentGroup> allGroups = new List<StudentGroup>();
+        static List<Discipline> allDisciplines = new List<Discipline>();
+
         static void Main(string[] args)
         {
             Console.OutputEncoding = System.Text.Encoding.UTF8;
-            // --- 1. ПІДГОТОВКА ДАНИХ (SEED DATA) ---
-            var teachers = new List<Teacher>
-{
-    new Teacher("Іванов І.І."),
-    new Teacher("Петров П.П."),
-    new Teacher("Сидоров С.С.")
-};
+            SeedData();
 
-            // Створюємо групу 2-го курсу окремо, щоб додати їй історію
-            var group4 = new StudentGroup("Група 4 (Алгоритми)", 2, 22);
-
-            // ІМІТАЦІЯ: Група 4 вже вивчила ООП на першому курсі
-            group4.MarkDisciplineAsCompleted("ООП");
-
-            var groups = new List<StudentGroup>
-{
-    new StudentGroup("Група 1 (Ідеальна)", 1, 25),
-    new StudentGroup("Група 2 (Мала)", 1, 9),
-    new StudentGroup("Група 3 (Випускники)", 3, 20),
-    group4,                                          // Наша оновлена група з історією
-    new StudentGroup("Група 5 (Середня)", 1, 18)
-};
-
-            // isCredit: true = Залік, false = Екзамен/МКР
-            var progBasics = new Discipline("Основи програмування", new List<int> { 1 }, 64, true);
-            var oop = new Discipline("ООП", new List<int> { 1, 2 }, 72, false);
-            var algo = new Discipline("Алгоритми", new List<int> { 2 }, 64, false);
-
-            var pbLec = new Activity("Лекція з Основ", ActivityType.Lecture, 2);
-            var pbLab = new Activity("Лаба з Основ", ActivityType.Laboratory, 4);
-            pbLec.AssignTeacher(teachers[0], progBasics.Name);
-            pbLab.AssignTeacher(teachers[0], progBasics.Name);
-            progBasics.AddActivity(pbLec);
-            progBasics.AddActivity(pbLab);
-
-            var oopLec = new Activity("Лекція з ООП", ActivityType.Lecture, 2);
-            var oopLab = new Activity("Лаба з ООП", ActivityType.Laboratory, 4);
-            oopLec.AssignTeacher(teachers[1], oop.Name);
-            oopLab.AssignTeacher(teachers[1], oop.Name);
-            oop.AddActivity(oopLec);
-            oop.AddActivity(oopLab);
-
-            var algoLec = new Activity("Лекція з Алгоритмів", ActivityType.Lecture, 4);
-            var algoLab = new Activity("Лаба з Алгоритмів", ActivityType.Laboratory, 4);
-            algoLec.AssignTeacher(teachers[2], algo.Name);
-            algoLab.AssignTeacher(teachers[2], algo.Name);
-            algo.AddActivity(algoLec);
-            algo.AddActivity(algoLab);
-
-            var allDisciplines = new List<Discipline> { progBasics, oop, algo };
-
-            // --- 2. ІНТЕРАКТИВНЕ МЕНЮ СИМУЛЯЦІЇ ---
+            // Тут головний цикл програми (Шар 1)
             while (true)
             {
                 Console.Clear();
-                Console.WriteLine("=== АКАДЕМІЧНИЙ СИМУЛЯТОР (Варіант 8) ===");
-                Console.WriteLine("КРОК 1: Оберіть групу для симуляції");
-                for (int i = 0; i < groups.Count; i++)
-                {
-                    Console.WriteLine($"{i + 1}. {groups[i].Name} (Курс: {groups[i].Course}, Студентів: {groups[i].StudentsCount})");
-                }
+                Console.WriteLine("=== ГОЛОВНЕ МЕНЮ СИСТЕМИ ===");
+                Console.WriteLine("1. Меню Адміністратора (Управління предметами та викладачами)");
+                Console.WriteLine("2. Симуляція навчання (Студенти та Пари)");
                 Console.WriteLine("0. Вихід");
-                Console.Write("> ");
-
-                string groupChoice = Console.ReadLine();
-                if (groupChoice == "0") break;
-
-                if (int.TryParse(groupChoice, out int gIndex) && gIndex > 0 && gIndex <= groups.Count)
-                {
-                    RunDisciplineSelection(groups[gIndex - 1], allDisciplines);
-                }
-            }
-        }
-
-        static void RunDisciplineSelection(StudentGroup group, List<Discipline> disciplines)
-        {
-            while (true)
-            {
-                Console.Clear();
-                Console.WriteLine($"--- Група: {group.Name} (Курс {group.Course}) ---");
-                Console.WriteLine("КРОК 2: Оберіть дисципліну для вивчення");
-
-                for (int i = 0; i < disciplines.Count; i++)
-                {
-                    string status = group.CompletedDisciplines.Contains(disciplines[i].Name) ? "[ВИВЧЕНО]" : "";
-                    Console.WriteLine($"{i + 1}. {disciplines[i].Name} {status}");
-                }
-                Console.WriteLine("0. Повернутися до вибору групи");
-                Console.Write("> ");
-
-                string discChoice = Console.ReadLine();
-                if (discChoice == "0") break;
-
-                if (int.TryParse(discChoice, out int dIndex) && dIndex > 0 && dIndex <= disciplines.Count)
-                {
-                    var selectedDiscipline = disciplines[dIndex - 1];
-
-                    // Перевірка: чи підходить курс і чи не вивчала група це раніше
-                    if (!selectedDiscipline.CanBeStudiedBy(group))
-                    {
-                        if (group.CompletedDisciplines.Contains(selectedDiscipline.Name))
-                            Console.WriteLine($"\n[ВІДМОВА] Група {group.Name} вже вивчала дисципліну '{selectedDiscipline.Name}'.");
-                        else
-                            Console.WriteLine($"\n[ВІДМОВА] Дисципліна '{selectedDiscipline.Name}' недоступна для {group.Course} курсу.");
-
-                        Console.ReadLine();
-                        continue;
-                    }
-
-                    RunActivityMenu(group, selectedDiscipline);
-                }
-            }
-        }
-
-        static void RunActivityMenu(StudentGroup group, Discipline discipline)
-        {
-            while (true)
-            {
-                Console.Clear();
-                Console.WriteLine($"--- Вивчення: {discipline.Name} ---");
-                Console.WriteLine($"Група: {group.Name} | Підгруп для лаб: {group.CalculateLabSubgroups()}");
-                Console.WriteLine($"Прогрес годин: {group.TotalStudiedHours} / {discipline.TargetHours}");
-                Console.WriteLine($"Здано лабораторних: {group.CompletedPracticalTasks}");
-                Console.WriteLine("----------------------------------");
-
-                for (int i = 0; i < discipline.Activities.Count; i++)
-                {
-                    var act = discipline.Activities[i];
-                    Console.WriteLine($"{i + 1}. Провести: {act.Title} ({act.Duration} год) - Викладач: {act.AssignedTeacher.Name} [{(act.AssignedTeacher.IsBusy ? "ЗАЙНЯТИЙ" : "ВІЛЬНИЙ")}]");
-                }
-                Console.WriteLine("8. Завершити всі поточні пари (Звільнити викладачів)");
-                Console.WriteLine("9. Спроба здати МКР / Екзамен / Залік");
-                Console.WriteLine("0. Повернутися до вибору дисципліни");
-                Console.Write("> ");
+                Console.Write("\nОберіть режим > ");
 
                 string choice = Console.ReadLine();
                 if (choice == "0") break;
+                else if (choice == "1") AdminLayer2_SubjectsList();
+                else if (choice == "2") SimLayer2_GroupsList();
+            }
+        }
+
+        // ==========================================
+        // РЕЖИМ 1: АДМІНІСТРАТОР (Налаштування)
+        // ==========================================
+
+        // ШАР 2 (Адмін): Список предметів
+        static void AdminLayer2_SubjectsList()
+        {
+            while (true)
+            {
+                Console.Clear();
+                Console.WriteLine("--- [АДМІН] СПИСОК ДИСЦИПЛІН ---");
+                for (int i = 0; i < allDisciplines.Count; i++)
+                {
+                    Console.WriteLine($"{i + 1}. {allDisciplines[i].Name} (Фінал: {allDisciplines[i].FinalControl})");
+                }
+                Console.WriteLine("0. Назад");
+                Console.Write("> ");
+
+                if (int.TryParse(Console.ReadLine(), out int idx) && idx == 0) return;
+                if (idx > 0 && idx <= allDisciplines.Count) AdminLayer3_EditSubject(allDisciplines[idx - 1]);
+            }
+        }
+
+        // ШАР 3 (Адмін): Меню редагування конкретного предмета
+        static void AdminLayer3_EditSubject(Discipline d)
+        {
+            while (true)
+            {
+                Console.Clear();
+                Console.WriteLine($"--- [АДМІН] НАЛАШТУВАННЯ: {d.Name} ---");
+                Console.WriteLine($"Поточний фінал: {d.FinalControl}");
+                Console.WriteLine($"Лектор: {d.MainLecturer?.Name ?? "Не призначено"}");
+                Console.WriteLine($"Практики: {d.Practice1?.Name ?? "-"}, {d.Practice2?.Name ?? "-"}");
+                Console.WriteLine($"Кількість активностей у курсі: {d.Activities.Count}");
+                Console.WriteLine("--------------------------------");
+                Console.WriteLine("1. Змінити фінальну активність");
+                Console.WriteLine("2. Призначити/Змінити викладачів");
+                Console.WriteLine("0. Назад");
+                Console.Write("> ");
+
+                string choice = Console.ReadLine();
+                if (choice == "0") return;
+                if (choice == "1") AdminLayer4_ChangeFinalActivity(d);
+                if (choice == "2") AdminLayer4_AssignTeachers(d);
+            }
+        }
+
+        // ШАР 4 (Адмін): Зміна фіналу
+        static void AdminLayer4_ChangeFinalActivity(Discipline d)
+        {
+            Console.Clear();
+            if (d.Name == "Основи програмування")
+            {
+                Console.WriteLine("Для 'Основ програмування' жорстко зафіксовано Залік. Зміна заборонена.");
+                Console.ReadLine(); return;
+            }
+
+            Console.WriteLine("Оберіть нову фінальну активність:");
+            Console.WriteLine("1. Тільки Екзамен");
+            Console.WriteLine("2. Екзамен + Курсова робота");
+            Console.Write("> ");
+            string choice = Console.ReadLine();
+
+            if (choice == "1") d.SetFinalControl(FinalControlType.Exam);
+            else if (choice == "2") d.SetFinalControl(FinalControlType.ExamAndCoursework);
+        }
+
+        // ШАР 4 (Адмін): Призначення викладачів
+        static void AdminLayer4_AssignTeachers(Discipline d)
+        {
+            Console.Clear();
+            var lecturers = allTeachers.Where(t => t.Role == TeacherRole.Lecturer).ToList();
+            var practices = allTeachers.Where(t => t.Role == TeacherRole.Practice).ToList();
+
+            Console.WriteLine("Оберіть Лектора (введіть номер):");
+            for (int i = 0; i < lecturers.Count; i++) Console.WriteLine($"{i + 1}. {lecturers[i].Name}");
+            int lecIdx = int.Parse(Console.ReadLine() ?? "1") - 1;
+
+            Console.WriteLine("\nОберіть Практика 1 (введіть номер):");
+            for (int i = 0; i < practices.Count; i++) Console.WriteLine($"{i + 1}. {practices[i].Name}");
+            int pr1Idx = int.Parse(Console.ReadLine() ?? "1") - 1;
+
+            Console.WriteLine("\nОберіть Практика 2 (введіть номер):");
+            for (int i = 0; i < practices.Count; i++) Console.WriteLine($"{i + 1}. {practices[i].Name}");
+            int pr2Idx = int.Parse(Console.ReadLine() ?? "2") - 1;
+
+            d.AssignTeachers(lecturers[lecIdx], practices[pr1Idx], practices[pr2Idx]);
+            Console.WriteLine("\nВикладачів успішно призначено!");
+            Console.ReadLine();
+        }
+
+        // ==========================================
+        // РЕЖИМ 2: СИМУЛЯЦІЯ (Навчання)
+        // ==========================================
+
+        // ШАР 2 (Симуляція): Список груп
+        static void SimLayer2_GroupsList()
+        {
+            while (true)
+            {
+                Console.Clear();
+                Console.WriteLine("--- [СИМУЛЯЦІЯ] СПИСОК ГРУП ---");
+                for (int i = 0; i < allGroups.Count; i++)
+                {
+                    Console.WriteLine($"{i + 1}. {allGroups[i].Name} (Студентів: {allGroups[i].StudentsCount})");
+                }
+                Console.WriteLine("0. Назад");
+                Console.Write("> ");
+
+                if (int.TryParse(Console.ReadLine(), out int idx) && idx == 0) return;
+                if (idx > 0 && idx <= allGroups.Count) SimLayer3_SubjectsForGroup(allGroups[idx - 1]);
+            }
+        }
+
+        // ШАР 3 (Симуляція): Вибір предмета
+        static void SimLayer3_SubjectsForGroup(StudentGroup group)
+        {
+            while (true)
+            {
+                Console.Clear();
+                Console.WriteLine($"--- ДИСЦИПЛІНИ ДЛЯ: {group.Name} ---");
+                for (int i = 0; i < allDisciplines.Count; i++)
+                {
+                    string status = group.CompletedDisciplines.Contains(allDisciplines[i].Name) ? "[ВИВЧЕНО]" : "";
+                    Console.WriteLine($"{i + 1}. {allDisciplines[i].Name} {status}");
+                }
+                Console.WriteLine("0. Назад");
+                Console.Write("> ");
+
+                if (int.TryParse(Console.ReadLine(), out int dIndex) && dIndex == 0) return;
+                if (dIndex > 0 && dIndex <= allDisciplines.Count)
+                {
+                    var disc = allDisciplines[dIndex - 1];
+                    if (!disc.CanBeStudiedBy(group))
+                    {
+                        Console.WriteLine("\n[ВІДМОВА] Група не може вивчати цей предмет (не той курс або вже вивчено).");
+                        Console.ReadLine(); continue;
+                    }
+                    SimLayer4_Dashboard(group, disc);
+                }
+            }
+        }
+
+        // ШАР 4 (Симуляція): Панель проведення пар та здачі фіналу
+        static void SimLayer4_Dashboard(StudentGroup group, Discipline d)
+        {
+            while (true)
+            {
+                Console.Clear();
+                int subgroups = group.CalculateLabSubgroups();
+                Console.WriteLine($"=== ПАНЕЛЬ КЕРУВАННЯ: {group.Name} -> {d.Name} ===");
+                Console.WriteLine($"Аудиторних годин: {group.GetHours(d.Name)}/64 | Здано ЛР: {group.GetLabs(d.Name)} (мін 8) | Написано МКР: {group.GetMkr(d.Name)}/2");
+                Console.WriteLine($"Підгруп для ЛР: {subgroups} | Статус екзамену: {(group.PassedExams.Contains(d.Name) ? "Складено" : "Не складено")}");
+                Console.WriteLine("---------------------------------------------------");
+                Console.WriteLine($"Лектор: {d.MainLecturer?.Name} [{(d.MainLecturer?.IsBusy == true ? "ЗАЙНЯТИЙ" : "Вільний")}]");
+                Console.WriteLine($"Практики: {d.Practice1?.Name} [{(d.Practice1?.IsBusy == true ? "ЗАЙНЯТИЙ" : "Вільний")}], {d.Practice2?.Name} [{(d.Practice2?.IsBusy == true ? "ЗАЙНЯТИЙ" : "Вільний")}]");
+                Console.WriteLine("---------------------------------------------------");
+
+                // Динамічна генерація меню з об'єктів Activity
+                for (int i = 0; i < d.Activities.Count; i++)
+                {
+                    Console.WriteLine($"{i + 1}. Провести: {d.Activities[i].Name} (+{d.Activities[i].DurationHours} год)");
+                }
+                Console.WriteLine("8. Звільнити викладачів (завершити всі пари)");
+                Console.WriteLine("9. СДАТИ ФІНАЛ (Екзамен/Залік/Курсова)");
+                Console.WriteLine("0. Назад");
+                Console.Write("> ");
+
+                string choice = Console.ReadLine();
+                if (choice == "0") return;
 
                 if (choice == "8")
                 {
-                    foreach (var act in discipline.Activities) act.AssignedTeacher?.FinishClass();
-                    Console.WriteLine("\n[ІНФО] Усі викладачі цієї дисципліни тепер ВІЛЬНІ.");
-                    Console.ReadLine();
+                    d.MainLecturer?.SetBusy(false); d.Practice1?.SetBusy(false); d.Practice2?.SetBusy(false);
                     continue;
                 }
 
                 if (choice == "9")
                 {
-                    bool success = discipline.ConductFinalAssessment(group, out string msg);
-                    Console.WriteLine($"\n[ФІНАЛЬНИЙ КОНТРОЛЬ]: {(success ? "УСПІХ" : "ВІДМОВА")} - {msg}");
-                    if (success)
-                    {
-                        Console.WriteLine("Дисципліну закрито. Натисніть Enter для виходу...");
-                        Console.ReadLine();
-                        break; // Виходимо з меню предмета, бо він зданий
-                    }
+                    bool success = d.TryPassFinal(group, out string msg);
+                    Console.WriteLine($"\n[РЕЗУЛЬТАТ]: {msg}");
                     Console.ReadLine();
+                    if (group.CompletedDisciplines.Contains(d.Name)) return;
                     continue;
                 }
 
-                if (int.TryParse(choice, out int actIndex) && actIndex > 0 && actIndex <= discipline.Activities.Count)
+                // Тут алгоритм проведення динамічної активності з перевіркою викладачів
+                if (int.TryParse(choice, out int actIdx) && actIdx > 0 && actIdx <= d.Activities.Count)
                 {
-                    var selectedActivity = discipline.Activities[actIndex - 1];
+                    var act = d.Activities[actIdx - 1];
 
-                    if (selectedActivity.CanStart(group, discipline, out string error))
+                    if (act.Category == ActivityCategory.Lecture)
                     {
-                        selectedActivity.AssignedTeacher.StartClass();
-                        selectedActivity.Conduct(group);
-                        Console.WriteLine($"\n[УСПІХ] {selectedActivity.Title} розпочато! Викладач {selectedActivity.AssignedTeacher.Name} тепер ЗАЙНЯТИЙ.");
+                        if (d.MainLecturer == null || d.MainLecturer.IsBusy) { Console.WriteLine("\nПомилка: Лектор зайнятий."); Console.ReadLine(); continue; }
+                        d.MainLecturer.SetBusy(true);
+                        group.AddHours(d.Name, act.DurationHours);
                     }
-                    else
+                    else if (act.Category == ActivityCategory.Practice)
                     {
-                        Console.WriteLine($"\n[ПОМИЛКА] Неможливо провести {selectedActivity.Title}: {error}");
+                        if (subgroups == 0) { Console.WriteLine("\nПомилка: Група замала (<10)."); Console.ReadLine(); continue; }
+                        if (d.Practice1 == null || d.Practice1.IsBusy || (subgroups == 2 && (d.Practice2 == null || d.Practice2.IsBusy)))
+                        { Console.WriteLine("\nПомилка: Немає вільних практиків."); Console.ReadLine(); continue; }
+
+                        d.Practice1.SetBusy(true); if (subgroups == 2) d.Practice2.SetBusy(true);
+                        group.AddHours(d.Name, act.DurationHours);
+                        group.AddLab(d.Name);
                     }
-                    Console.ReadLine();
+                    else if (act.Category == ActivityCategory.Control)
+                    {
+                        if (d.Practice1 == null || d.Practice1.IsBusy || (subgroups == 2 && (d.Practice2 == null || d.Practice2.IsBusy)))
+                        { Console.WriteLine("\nПомилка: Немає вільних практиків для контролю."); Console.ReadLine(); continue; }
+
+                        d.Practice1.SetBusy(true); if (subgroups == 2) d.Practice2.SetBusy(true);
+                        group.AddHours(d.Name, act.DurationHours);
+                        group.AddMkr(d.Name);
+                    }
+
+                    Console.WriteLine($"\n'{act.Name}' успішно проведено!"); Console.ReadLine();
                 }
             }
+        }
+
+        // ==========================================
+        // ІНІЦІАЛІЗАЦІЯ ДАНИХ 
+        // ==========================================
+        static void SeedData()
+        {
+            allTeachers.Add(new Teacher("Проф. Коваленко (Лектор)", TeacherRole.Lecturer));
+            for (int i = 1; i <= 6; i++) allTeachers.Add(new Teacher($"Практик {i}", TeacherRole.Practice));
+
+            allGroups.Add(new StudentGroup("Група 1 (25 осіб)", 1, 25));
+            allGroups.Add(new StudentGroup("Група 2 (18 осіб)", 1, 18));
+            allGroups.Add(new StudentGroup("Група 3 (9 осіб)", 1, 9));
+
+            var progBasics = new Discipline("Основи програмування", new List<int> { 1 }, FinalControlType.Credit);
+            var oop = new Discipline("ООП", new List<int> { 1, 2 }, FinalControlType.Exam);
+            var algo = new Discipline("Алгоритми", new List<int> { 2 }, FinalControlType.ExamAndCoursework);
+
+            // [ПРИКЛАД ПРОСТОГО РОЗШИРЕННЯ В КОДІ]: 
+            // Якщо завтра знадобиться додати "Семінар" або "Колоквіум", розробнику
+            // потрібно лише додати новий рядок `new Activity(...)` у цей список.
+            // Меню студента (Шар 4) автоматично згенерує під нього кнопку без зміни логіки інтерфейсу.
+            var defaultActivities = new List<Activity> {
+                new Activity("Лекція", ActivityCategory.Lecture, 2),
+                new Activity("Лабораторна робота", ActivityCategory.Practice, 4),
+                new Activity("Модульна Контрольна (МКР)", ActivityCategory.Control, 2)
+            };
+
+            progBasics.Activities.AddRange(defaultActivities);
+            oop.Activities.AddRange(defaultActivities);
+            algo.Activities.AddRange(defaultActivities);
+
+            progBasics.AssignTeachers(allTeachers[0], allTeachers[1], allTeachers[2]);
+            oop.AssignTeachers(allTeachers[0], allTeachers[3], allTeachers[4]);
+            algo.AssignTeachers(allTeachers[0], allTeachers[5], allTeachers[6]);
+
+            allDisciplines.Add(progBasics); allDisciplines.Add(oop); allDisciplines.Add(algo);
         }
     }
 }
