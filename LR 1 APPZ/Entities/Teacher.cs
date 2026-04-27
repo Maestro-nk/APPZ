@@ -6,27 +6,29 @@ namespace LR_1_APPZ.Entities
     {
         public string Name { get; private set; }
         public string CurrentDiscipline { get; private set; }
+        public bool IsBusy { get; private set; } // Захист від подвійного бронювання
 
         public Teacher(string name)
         {
             Name = name;
             CurrentDiscipline = null;
+            IsBusy = false;
         }
 
-        // Перевірка обмеження: один викладач = одна дисципліна в момент часу
         public bool AssignDiscipline(string disciplineName)
         {
-            if (CurrentDiscipline != null && CurrentDiscipline != disciplineName)
-            {
-                return false;
-            }
+            if (CurrentDiscipline != null && CurrentDiscipline != disciplineName) return false;
             CurrentDiscipline = disciplineName;
             return true;
         }
 
-        public void FinishTeaching()
+        public bool StartClass()
         {
-            CurrentDiscipline = null;
+            if (IsBusy) return false;
+            IsBusy = true;
+            return true;
         }
+
+        public void FinishClass() => IsBusy = false;
     }
 }

@@ -2,13 +2,7 @@
 
 namespace LR_1_APPZ.Entities
 {
-    public enum ActivityType
-    {
-        Lecture,
-        Laboratory,
-        Exam,
-        Credit
-    }
+    public enum ActivityType { Lecture, Laboratory, Exam, Credit }
 
     public class Activity
     {
@@ -34,41 +28,21 @@ namespace LR_1_APPZ.Entities
             return false;
         }
 
-        // Guard Clause: Перевірка ВСІХ умов ПЕРЕД тим, як дозволити заняття
-        public bool CanBeConductedFor(StudentGroup group, Discipline discipline, out string errorMessage)
+        // Перевірка ВСІХ умов (включно із зайнятістю викладача)
+        public bool CanStart(StudentGroup group, Discipline discipline, out string error)
         {
-            if (AssignedTeacher == null)
-            {
-                errorMessage = "No teacher assigned to this activity.";
-                return false;
-            }
+            if (AssignedTeacher == null) { error = "No teacher assigned."; return false; }
+            if (AssignedTeacher.IsBusy) { error = $"Teacher {AssignedTeacher.Name} is currently BUSY with another group!"; return false; }
+            if (Type == ActivityType.Laboratory && group.CalculateLabSubgroups() == 0) { error = "Group is too small for labs (min 10)."; return false; }
+            if (group.TotalStudiedHours + Duration > discipline.TargetHours) { error = $"Exceeds total discipline hours ({discipline.TargetHours})."; return false; }
 
-            // Перевірка кількості осіб для лабораторних (Варіант 8)
-            if (Type == ActivityType.Laboratory && group.CalculateLabSubgroups() == 0)
-            {
-                errorMessage = "Group is too small for lab subgroups (min 10 students).";
-                return false;
-            }
-
-            // Перевірка ліміту годин дисципліни
-            if (group.TotalStudiedHours + Duration > discipline.TargetHours)
-            {
-                errorMessage = $"Exceeds total discipline hours ({discipline.TargetHours}).";
-                return false;
-            }
-
-            errorMessage = "OK";
+            error = "OK";
             return true;
         }
 
-        // Сама симуляція процесу
         public void Conduct(StudentGroup group)
         {
-            if (Type == ActivityType.Laboratory)
-            {
-                group.CompletePracticalTask();
-            }
-
+            if (Type == ActivityType.Laboratory) group.CompletePracticalTask();
             group.AddStudiedHours(Duration);
         }
     }

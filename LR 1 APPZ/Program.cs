@@ -8,7 +8,7 @@ namespace LR_1_APPZ
     {
         static void Main(string[] args)
         {
-            // --- 1. SEED DATA (Підготовка даних для демо) ---
+            // --- 1. SEED DATA ---
             var teachers = new List<Teacher>
             {
                 new Teacher("Ivanov I.I."),
@@ -18,18 +18,16 @@ namespace LR_1_APPZ
 
             var groups = new List<StudentGroup>
             {
-                new StudentGroup("Group 1-Normal", 1, 25),      // 1 курс
-                new StudentGroup("Group 2-Small", 1, 9),        // Менше 10 осіб (лаби заборонені)
-                new StudentGroup("Group 3-Grads", 3, 20),       // 3 курс (дисципліни заборонені)
-                new StudentGroup("Group 4-Algo", 2, 22)         // 2 курс (для Алгоритмів)
+                new StudentGroup("Group 1-Normal", 1, 25),
+                new StudentGroup("Group 2-Small", 1, 9),
+                new StudentGroup("Group 3-Grads", 3, 20),
+                new StudentGroup("Group 4-Algo", 2, 22)
             };
 
-            // Створюємо всі 3 дисципліни за варіантом 8
-            var progBasics = new Discipline("Programming Basics", new List<int> { 1 }, 64, false, true); // 1 курс, залік
-            var oop = new Discipline("OOP", new List<int> { 1, 2 }, 72, true, false);                    // 1-2 курс, екзамен
-            var algo = new Discipline("Algorithms", new List<int> { 2 }, 64, true, false);               // 2 курс, екзамен
+            var progBasics = new Discipline("Programming Basics", new List<int> { 1 }, 64, false, true);
+            var oop = new Discipline("OOP", new List<int> { 1, 2 }, 72, true, false);
+            var algo = new Discipline("Algorithms", new List<int> { 2 }, 64, true, false);
 
-            // Наповнюємо "Основи програмування"
             var pbLec = new Activity("Prog Basics Lecture", ActivityType.Lecture, 2);
             var pbLab = new Activity("Prog Basics Lab", ActivityType.Laboratory, 4);
             pbLec.AssignTeacher(teachers[0], progBasics.Name);
@@ -37,7 +35,6 @@ namespace LR_1_APPZ
             progBasics.AddActivity(pbLec);
             progBasics.AddActivity(pbLab);
 
-            // Наповнюємо "ООП"
             var oopLec = new Activity("OOP Lecture", ActivityType.Lecture, 2);
             var oopLab = new Activity("OOP Lab", ActivityType.Laboratory, 4);
             oopLec.AssignTeacher(teachers[1], oop.Name);
@@ -45,7 +42,6 @@ namespace LR_1_APPZ
             oop.AddActivity(oopLec);
             oop.AddActivity(oopLab);
 
-            // Наповнюємо "Алгоритми"
             var algoLec = new Activity("Algorithms Lecture", ActivityType.Lecture, 4);
             var algoLab = new Activity("Algorithms Lab", ActivityType.Laboratory, 4);
             algoLec.AssignTeacher(teachers[2], algo.Name);
@@ -73,15 +69,11 @@ namespace LR_1_APPZ
 
                 if (int.TryParse(groupChoice, out int gIndex) && gIndex > 0 && gIndex <= groups.Count)
                 {
-                    var selectedGroup = groups[gIndex - 1];
-
-                    // Перехід до вибору дисципліни
-                    RunDisciplineSelection(selectedGroup, allDisciplines);
+                    RunDisciplineSelection(groups[gIndex - 1], allDisciplines);
                 }
             }
         }
 
-        // ДОДАНО: Меню вибору дисципліни
         static void RunDisciplineSelection(StudentGroup group, List<Discipline> disciplines)
         {
             while (true)
@@ -104,21 +96,19 @@ namespace LR_1_APPZ
                 {
                     var selectedDiscipline = disciplines[dIndex - 1];
 
-                    // Перевірка курсу (Чи має право група вивчати цей предмет?)
+                    // Відновлено перевірку курсу
                     if (!selectedDiscipline.CanBeStudiedBy(group))
                     {
-                        Console.WriteLine($"\n[ACCESS DENIED] {group.Name} is on year {group.Course}. The discipline '{selectedDiscipline.Name}' is not available for this year.");
+                        Console.WriteLine($"\n[ACCESS DENIED] {group.Name} is on year {group.Course}. '{selectedDiscipline.Name}' is not allowed.");
                         Console.ReadLine();
                         continue;
                     }
 
-                    // Якщо перевірка пройдена - переходимо до навчання
                     RunActivityMenu(group, selectedDiscipline);
                 }
             }
         }
 
-        // ЗМІНЕНО НАЗВУ: Меню проведення занять (колишнє RunDisciplineMenu)
         static void RunActivityMenu(StudentGroup group, Discipline discipline)
         {
             while (true)
@@ -133,14 +123,24 @@ namespace LR_1_APPZ
                 for (int i = 0; i < discipline.Activities.Count; i++)
                 {
                     var act = discipline.Activities[i];
-                    Console.WriteLine($"{i + 1}. Conduct {act.Title} ({act.Duration}h)");
+                    Console.WriteLine($"{i + 1}. Conduct {act.Title} ({act.Duration}h) - Teacher: {act.AssignedTeacher.Name} [{(act.AssignedTeacher.IsBusy ? "BUSY" : "FREE")}]");
                 }
+                Console.WriteLine("8. Finish all current classes (Free up teachers)");
                 Console.WriteLine("9. Attempt Final Exam / Credit");
                 Console.WriteLine("0. Back to Discipline Selection");
                 Console.Write("> ");
 
                 string choice = Console.ReadLine();
                 if (choice == "0") break;
+
+                // Звільнення викладачів після пари
+                if (choice == "8")
+                {
+                    foreach (var act in discipline.Activities) act.AssignedTeacher?.FinishClass();
+                    Console.WriteLine("\n[INFO] All teachers for this discipline are now FREE.");
+                    Console.ReadLine();
+                    continue;
+                }
 
                 if (choice == "9")
                 {
@@ -154,10 +154,11 @@ namespace LR_1_APPZ
                 {
                     var selectedActivity = discipline.Activities[actIndex - 1];
 
-                    if (selectedActivity.CanBeConductedFor(group, discipline, out string error))
+                    if (selectedActivity.CanStart(group, discipline, out string error))
                     {
+                        selectedActivity.AssignedTeacher.StartClass(); // Займаємо викладача
                         selectedActivity.Conduct(group);
-                        Console.WriteLine($"\n[SUCCESS] {selectedActivity.Title} conducted!");
+                        Console.WriteLine($"\n[SUCCESS] {selectedActivity.Title} started and conducted! Teacher {selectedActivity.AssignedTeacher.Name} is now BUSY.");
                     }
                     else
                     {
