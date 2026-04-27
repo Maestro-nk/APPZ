@@ -2,7 +2,8 @@
 
 namespace LR_1_APPZ.Entities
 {
-    public enum ActivityType { Lecture, Laboratory, Exam, Credit }
+    // Я додав МКР (Модульну контрольну роботу) до переліку активностей
+    public enum ActivityType { Lecture, Laboratory, Exam, Credit, ModularControl }
 
     public class Activity
     {
@@ -28,15 +29,15 @@ namespace LR_1_APPZ.Entities
             return false;
         }
 
-        // Перевірка ВСІХ умов (включно із зайнятістю викладача)
+        // Guard Clause: я перевіряю всі умови до того, як дозволити проведення заняття
         public bool CanStart(StudentGroup group, Discipline discipline, out string error)
         {
-            if (AssignedTeacher == null) { error = "No teacher assigned."; return false; }
-            if (AssignedTeacher.IsBusy) { error = $"Teacher {AssignedTeacher.Name} is currently BUSY with another group!"; return false; }
-            if (Type == ActivityType.Laboratory && group.CalculateLabSubgroups() == 0) { error = "Group is too small for labs (min 10)."; return false; }
-            if (group.TotalStudiedHours + Duration > discipline.TargetHours) { error = $"Exceeds total discipline hours ({discipline.TargetHours})."; return false; }
+            if (AssignedTeacher == null) { error = "Викладача не призначено."; return false; }
+            if (AssignedTeacher.IsBusy) { error = $"Викладач {AssignedTeacher.Name} зараз веде пару в іншої групи!"; return false; }
+            if (Type == ActivityType.Laboratory && group.CalculateLabSubgroups() == 0) { error = "Група занадто мала для лабораторних (менше 10 осіб)."; return false; }
+            if (group.TotalStudiedHours + Duration > discipline.TargetHours) { error = $"Перевищено ліміт годин дисципліни ({discipline.TargetHours} год)."; return false; }
 
-            error = "OK";
+            error = "ОК";
             return true;
         }
 

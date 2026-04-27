@@ -8,42 +8,51 @@ namespace LR_1_APPZ
     {
         static void Main(string[] args)
         {
-            // --- 1. SEED DATA ---
+            Console.OutputEncoding = System.Text.Encoding.UTF8;
+            // --- 1. ПІДГОТОВКА ДАНИХ (SEED DATA) ---
             var teachers = new List<Teacher>
-            {
-                new Teacher("Ivanov I.I."),
-                new Teacher("Petrov P.P."),
-                new Teacher("Sidorov S.S.")
-            };
+{
+    new Teacher("Іванов І.І."),
+    new Teacher("Петров П.П."),
+    new Teacher("Сидоров С.С.")
+};
+
+            // Створюємо групу 2-го курсу окремо, щоб додати їй історію
+            var group4 = new StudentGroup("Група 4 (Алгоритми)", 2, 22);
+
+            // ІМІТАЦІЯ: Група 4 вже вивчила ООП на першому курсі
+            group4.MarkDisciplineAsCompleted("ООП");
 
             var groups = new List<StudentGroup>
-            {
-                new StudentGroup("Group 1-Normal", 1, 25),
-                new StudentGroup("Group 2-Small", 1, 9),
-                new StudentGroup("Group 3-Grads", 3, 20),
-                new StudentGroup("Group 4-Algo", 2, 22)
-            };
+{
+    new StudentGroup("Група 1 (Ідеальна)", 1, 25),
+    new StudentGroup("Група 2 (Мала)", 1, 9),
+    new StudentGroup("Група 3 (Випускники)", 3, 20),
+    group4,                                          // Наша оновлена група з історією
+    new StudentGroup("Група 5 (Середня)", 1, 18)
+};
 
-            var progBasics = new Discipline("Programming Basics", new List<int> { 1 }, 64, false, true);
-            var oop = new Discipline("OOP", new List<int> { 1, 2 }, 72, true, false);
-            var algo = new Discipline("Algorithms", new List<int> { 2 }, 64, true, false);
+            // isCredit: true = Залік, false = Екзамен/МКР
+            var progBasics = new Discipline("Основи програмування", new List<int> { 1 }, 64, true);
+            var oop = new Discipline("ООП", new List<int> { 1, 2 }, 72, false);
+            var algo = new Discipline("Алгоритми", new List<int> { 2 }, 64, false);
 
-            var pbLec = new Activity("Prog Basics Lecture", ActivityType.Lecture, 2);
-            var pbLab = new Activity("Prog Basics Lab", ActivityType.Laboratory, 4);
+            var pbLec = new Activity("Лекція з Основ", ActivityType.Lecture, 2);
+            var pbLab = new Activity("Лаба з Основ", ActivityType.Laboratory, 4);
             pbLec.AssignTeacher(teachers[0], progBasics.Name);
             pbLab.AssignTeacher(teachers[0], progBasics.Name);
             progBasics.AddActivity(pbLec);
             progBasics.AddActivity(pbLab);
 
-            var oopLec = new Activity("OOP Lecture", ActivityType.Lecture, 2);
-            var oopLab = new Activity("OOP Lab", ActivityType.Laboratory, 4);
+            var oopLec = new Activity("Лекція з ООП", ActivityType.Lecture, 2);
+            var oopLab = new Activity("Лаба з ООП", ActivityType.Laboratory, 4);
             oopLec.AssignTeacher(teachers[1], oop.Name);
             oopLab.AssignTeacher(teachers[1], oop.Name);
             oop.AddActivity(oopLec);
             oop.AddActivity(oopLab);
 
-            var algoLec = new Activity("Algorithms Lecture", ActivityType.Lecture, 4);
-            var algoLab = new Activity("Algorithms Lab", ActivityType.Laboratory, 4);
+            var algoLec = new Activity("Лекція з Алгоритмів", ActivityType.Lecture, 4);
+            var algoLab = new Activity("Лаба з Алгоритмів", ActivityType.Laboratory, 4);
             algoLec.AssignTeacher(teachers[2], algo.Name);
             algoLab.AssignTeacher(teachers[2], algo.Name);
             algo.AddActivity(algoLec);
@@ -51,17 +60,17 @@ namespace LR_1_APPZ
 
             var allDisciplines = new List<Discipline> { progBasics, oop, algo };
 
-            // --- 2. INTERACTIVE SIMULATION MENU ---
+            // --- 2. ІНТЕРАКТИВНЕ МЕНЮ СИМУЛЯЦІЇ ---
             while (true)
             {
                 Console.Clear();
-                Console.WriteLine("=== ACADEMIC SIMULATOR (Variant 8) ===");
-                Console.WriteLine("STEP 1: Select a group for simulation");
+                Console.WriteLine("=== АКАДЕМІЧНИЙ СИМУЛЯТОР (Варіант 8) ===");
+                Console.WriteLine("КРОК 1: Оберіть групу для симуляції");
                 for (int i = 0; i < groups.Count; i++)
                 {
-                    Console.WriteLine($"{i + 1}. {groups[i].Name} (Year: {groups[i].Course}, Students: {groups[i].StudentsCount})");
+                    Console.WriteLine($"{i + 1}. {groups[i].Name} (Курс: {groups[i].Course}, Студентів: {groups[i].StudentsCount})");
                 }
-                Console.WriteLine("0. Exit");
+                Console.WriteLine("0. Вихід");
                 Console.Write("> ");
 
                 string groupChoice = Console.ReadLine();
@@ -79,14 +88,15 @@ namespace LR_1_APPZ
             while (true)
             {
                 Console.Clear();
-                Console.WriteLine($"--- Group: {group.Name} (Year {group.Course}) ---");
-                Console.WriteLine("STEP 2: Select a discipline to study");
+                Console.WriteLine($"--- Група: {group.Name} (Курс {group.Course}) ---");
+                Console.WriteLine("КРОК 2: Оберіть дисципліну для вивчення");
 
                 for (int i = 0; i < disciplines.Count; i++)
                 {
-                    Console.WriteLine($"{i + 1}. {disciplines[i].Name} (Target Hours: {disciplines[i].TargetHours})");
+                    string status = group.CompletedDisciplines.Contains(disciplines[i].Name) ? "[ВИВЧЕНО]" : "";
+                    Console.WriteLine($"{i + 1}. {disciplines[i].Name} {status}");
                 }
-                Console.WriteLine("0. Back to Group Selection");
+                Console.WriteLine("0. Повернутися до вибору групи");
                 Console.Write("> ");
 
                 string discChoice = Console.ReadLine();
@@ -96,10 +106,14 @@ namespace LR_1_APPZ
                 {
                     var selectedDiscipline = disciplines[dIndex - 1];
 
-                    // Відновлено перевірку курсу
+                    // Перевірка: чи підходить курс і чи не вивчала група це раніше
                     if (!selectedDiscipline.CanBeStudiedBy(group))
                     {
-                        Console.WriteLine($"\n[ACCESS DENIED] {group.Name} is on year {group.Course}. '{selectedDiscipline.Name}' is not allowed.");
+                        if (group.CompletedDisciplines.Contains(selectedDiscipline.Name))
+                            Console.WriteLine($"\n[ВІДМОВА] Група {group.Name} вже вивчала дисципліну '{selectedDiscipline.Name}'.");
+                        else
+                            Console.WriteLine($"\n[ВІДМОВА] Дисципліна '{selectedDiscipline.Name}' недоступна для {group.Course} курсу.");
+
                         Console.ReadLine();
                         continue;
                     }
@@ -114,30 +128,29 @@ namespace LR_1_APPZ
             while (true)
             {
                 Console.Clear();
-                Console.WriteLine($"--- Studying: {discipline.Name} ---");
-                Console.WriteLine($"Group: {group.Name}");
-                Console.WriteLine($"Progress: {group.TotalStudiedHours} / {discipline.TargetHours} hours");
-                Console.WriteLine($"Completed Labs: {group.CompletedPracticalTasks}");
+                Console.WriteLine($"--- Вивчення: {discipline.Name} ---");
+                Console.WriteLine($"Група: {group.Name} | Підгруп для лаб: {group.CalculateLabSubgroups()}");
+                Console.WriteLine($"Прогрес годин: {group.TotalStudiedHours} / {discipline.TargetHours}");
+                Console.WriteLine($"Здано лабораторних: {group.CompletedPracticalTasks}");
                 Console.WriteLine("----------------------------------");
 
                 for (int i = 0; i < discipline.Activities.Count; i++)
                 {
                     var act = discipline.Activities[i];
-                    Console.WriteLine($"{i + 1}. Conduct {act.Title} ({act.Duration}h) - Teacher: {act.AssignedTeacher.Name} [{(act.AssignedTeacher.IsBusy ? "BUSY" : "FREE")}]");
+                    Console.WriteLine($"{i + 1}. Провести: {act.Title} ({act.Duration} год) - Викладач: {act.AssignedTeacher.Name} [{(act.AssignedTeacher.IsBusy ? "ЗАЙНЯТИЙ" : "ВІЛЬНИЙ")}]");
                 }
-                Console.WriteLine("8. Finish all current classes (Free up teachers)");
-                Console.WriteLine("9. Attempt Final Exam / Credit");
-                Console.WriteLine("0. Back to Discipline Selection");
+                Console.WriteLine("8. Завершити всі поточні пари (Звільнити викладачів)");
+                Console.WriteLine("9. Спроба здати МКР / Екзамен / Залік");
+                Console.WriteLine("0. Повернутися до вибору дисципліни");
                 Console.Write("> ");
 
                 string choice = Console.ReadLine();
                 if (choice == "0") break;
 
-                // Звільнення викладачів після пари
                 if (choice == "8")
                 {
                     foreach (var act in discipline.Activities) act.AssignedTeacher?.FinishClass();
-                    Console.WriteLine("\n[INFO] All teachers for this discipline are now FREE.");
+                    Console.WriteLine("\n[ІНФО] Усі викладачі цієї дисципліни тепер ВІЛЬНІ.");
                     Console.ReadLine();
                     continue;
                 }
@@ -145,7 +158,13 @@ namespace LR_1_APPZ
                 if (choice == "9")
                 {
                     bool success = discipline.ConductFinalAssessment(group, out string msg);
-                    Console.WriteLine($"\n[FINAL ASSESSMENT]: {(success ? "PASSED" : "FAILED")} - {msg}");
+                    Console.WriteLine($"\n[ФІНАЛЬНИЙ КОНТРОЛЬ]: {(success ? "УСПІХ" : "ВІДМОВА")} - {msg}");
+                    if (success)
+                    {
+                        Console.WriteLine("Дисципліну закрито. Натисніть Enter для виходу...");
+                        Console.ReadLine();
+                        break; // Виходимо з меню предмета, бо він зданий
+                    }
                     Console.ReadLine();
                     continue;
                 }
@@ -156,13 +175,13 @@ namespace LR_1_APPZ
 
                     if (selectedActivity.CanStart(group, discipline, out string error))
                     {
-                        selectedActivity.AssignedTeacher.StartClass(); // Займаємо викладача
+                        selectedActivity.AssignedTeacher.StartClass();
                         selectedActivity.Conduct(group);
-                        Console.WriteLine($"\n[SUCCESS] {selectedActivity.Title} started and conducted! Teacher {selectedActivity.AssignedTeacher.Name} is now BUSY.");
+                        Console.WriteLine($"\n[УСПІХ] {selectedActivity.Title} розпочато! Викладач {selectedActivity.AssignedTeacher.Name} тепер ЗАЙНЯТИЙ.");
                     }
                     else
                     {
-                        Console.WriteLine($"\n[ERROR] Cannot conduct {selectedActivity.Title}: {error}");
+                        Console.WriteLine($"\n[ПОМИЛКА] Неможливо провести {selectedActivity.Title}: {error}");
                     }
                     Console.ReadLine();
                 }

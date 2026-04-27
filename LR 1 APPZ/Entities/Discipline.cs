@@ -9,30 +9,42 @@ namespace LR_1_APPZ.Entities
         public List<int> AllowedCourses { get; private set; }
         public int TargetHours { get; private set; }
         public List<Activity> Activities { get; private set; }
-        public bool HasExam { get; private set; }
-        public bool HasCredit { get; private set; }
 
-        public Discipline(string name, List<int> allowedCourses, int targetHours, bool hasExam, bool hasCredit)
+        // Я використовую цей прапорець, щоб визначити тип фінального контролю (Залік чи Екзамен/МКР)
+        public bool IsCredit { get; private set; }
+
+        public Discipline(string name, List<int> allowedCourses, int targetHours, bool isCredit)
         {
             Name = name;
             AllowedCourses = allowedCourses;
-            TargetHours = targetHours < 64 ? 64 : targetHours;
+            TargetHours = targetHours < 64 ? 64 : targetHours; // Захист мінімальних годин за ТЗ
             Activities = new List<Activity>();
-            HasExam = hasExam;
-            HasCredit = hasCredit;
+            IsCredit = isCredit;
         }
 
         public void AddActivity(Activity activity) => Activities.Add(activity);
-        public bool CanBeStudiedBy(StudentGroup group) => AllowedCourses.Contains(group.Course);
 
+        // Тут я додав перевірку: дисципліну можна вивчати тільки один раз!
+        public bool CanBeStudiedBy(StudentGroup group)
+        {
+            bool isAllowedCourse = AllowedCourses.Contains(group.Course);
+            bool isAlreadyCompleted = group.CompletedDisciplines.Contains(Name);
+
+            return isAllowedCourse && !isAlreadyCompleted;
+        }
+
+        // Логіка допуску до МКР/Екзамену та Залік "автоматом"
         public bool ConductFinalAssessment(StudentGroup group, out string message)
         {
-            if (HasExam && group.CompletedPracticalTasks < 1)
+            // Якщо це не залік (екзамен або МКР), то потрібні здані роботи
+            if (!IsCredit && group.CompletedPracticalTasks < 1)
             {
-                message = "Need at least 1 completed lab for Exam.";
+                message = "Без зданих лабораторних робіт допуск до МКР/Екзамену заборонено!";
                 return false;
             }
-            message = HasCredit ? "Credit achieved automatically!" : "Exam passed successfully!";
+
+            message = IsCredit ? "Залік виставлено автоматом!" : "МКР/Екзамен успішно складено!";
+            group.MarkDisciplineAsCompleted(Name); // Фіксуємо, що група пройшла предмет
             return true;
         }
     }
