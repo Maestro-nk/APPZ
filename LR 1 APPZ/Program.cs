@@ -291,6 +291,18 @@ namespace LR1_APPZ
             algo.AssignTeachers(allTeachers[0], allTeachers[5], allTeachers[6]);
 
             allDisciplines.Add(progBasics); allDisciplines.Add(oop); allDisciplines.Add(algo);
+
+            // ==========================================
+            // ДЕМО-ГРУПА ДЛЯ ШВИДКОГО ЗАХИСТУ
+            // ==========================================
+            var demoGroup = new StudentGroup("Група 0 (Демо-Спідран)", 2, 20); 
+
+            demoGroup.AddHours("Алгоритми", 56); 
+
+            for (int i = 0; i < 7; i++) demoGroup.AddLab("Алгоритми"); 
+            demoGroup.AddMkr("Алгоритми"); 
+
+            allGroups.Add(demoGroup);
         }
     }
 }
